@@ -15,6 +15,4 @@ urlpatterns = [
     path('favorites/', views.user_favorites, name='user_favorites'),
     path('listings/<int:pk>/add-to-favorites/', views.add_to_favorites, name='add_to_favorites'),
     path('listings/<int:pk>/remove-from-favorites/', views.remove_from_favorites, name='remove_from_favorites'),
-
-    path('recipes/suggestions/', views.recipe_suggestions, name='recipe_suggestions'),
 ]

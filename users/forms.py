@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordResetForm
 from .models import User
 
+#custom registration form extending the built-in UserCreationForm
 class RegistrationForm(UserCreationForm):
     class Meta:
         model = User

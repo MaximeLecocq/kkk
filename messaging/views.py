@@ -9,7 +9,6 @@ from django.db.models import OuterRef, Subquery, Q
 #it retrieves or creates a conversation between the student and the donor for the specified listing.
 @login_required
 def start_conversation(request, listing_pk):
-    #get the current user (student)
     user = request.user
     listing = get_object_or_404(Listing, pk=listing_pk)
     donor = listing.donor
@@ -56,7 +55,7 @@ def inbox(request):
         latest_message_time=Subquery(
             Message.objects.filter(conversation=OuterRef('pk')).order_by('-timestamp').values('timestamp')[:1]
         )
-    ).order_by('-latest_message_time') #order conversations by the latest message time (descending)
+    ).order_by('-latest_message_time')
 
 
     return render(request, 'messaging/inbox.html', {'conversations': conversations})

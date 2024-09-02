@@ -2,6 +2,8 @@ from django import forms
 from .models import Listing
 from datetime import date
 
+#this code defines a Django ModelForm for creating or updating a 'Listing', including fields for categories, 
+#expiry dates, images, and addresses. It also validates that some categories have associated expiry dates.
 class ListingForm(forms.ModelForm):
     CATEGORIES = (
         ('canned', 'Canned Goods'),
@@ -88,7 +90,8 @@ class ListingForm(forms.ModelForm):
         return cleaned_data
 
 
-
+#this code defines a simple form for searching listings by title, city, and categories. 
+#the form fields are optional, and categories can be selected using checkboxes.
 class SearchForm(forms.Form):
     title = forms.CharField(max_length=100, required=False, label='Search by Title')
     city = forms.CharField(max_length=100, required=False, label='Search by City/Town')

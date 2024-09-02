@@ -4,6 +4,7 @@ from users.models import User
 from datetime import date
 from listings.forms import ListingForm
 
+#unit tests for the Listing model to ensure that listings are created properly and include important fields like expiry dates
 class ListingModelTest(TestCase):
     def setUp(self):
         #set up a user (donor) for use in the tests
@@ -37,7 +38,7 @@ class ListingModelTest(TestCase):
         #assert that the expiry date is not None
         self.assertIsNotNone(listing.expiry_date_canned)
 
-
+#unit tests for the ListingForm to validate form behavior for missing fields such as expiry dates and images
 class ListingFormTest(TestCase):
     def test_missing_expiry_date(self):
         #test that the form is invalid if an expiry date is missing for a canned category
@@ -52,7 +53,6 @@ class ListingFormTest(TestCase):
         form = ListingForm(data=form_data, files=form_files)
         #assert that the form is not valid because the expiry date is missing
         self.assertFalse(form.is_valid())
-        #assert that the error message relates to the missing expiry date for canned goods
         self.assertIn('expiry_date_canned', form.errors)
 
     def test_missing_image(self):
@@ -69,5 +69,4 @@ class ListingFormTest(TestCase):
         form = ListingForm(data=form_data)
         #assert that the form is not valid because image1 is missing
         self.assertFalse(form.is_valid())
-        #assert that the error message relates to the missing image1 field
         self.assertIn('image1', form.errors)

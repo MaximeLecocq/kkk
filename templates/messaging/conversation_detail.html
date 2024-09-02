@@ -14,7 +14,6 @@
         <!-- messages -->
         {% for message in conversation.messages.all %}
           <div class="flex items-center space-x-4 {% if message.sender == conversation.donor %}justify-end{% else %}justify-start{% endif %}">
-            
             <!-- conditional display for student's messages -->
             {% if message.sender == conversation.student %}
               <div class="flex items-center space-x-2">

@@ -4,14 +4,13 @@ from django.contrib import messages
 from users.models import User
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
-
 from .forms import ListingForm, SearchForm
 from .models import Listing
-from .utils import get_ingredients_from_listing
-
 import requests
+from recipes.utils import get_ingredients_from_listing
+from recipes.views import get_recipe_suggestions
 
-
+#view function for rendering the homepage with filtered and paginated listings based on user queries
 def homepage(request):
     title_query = request.GET.get('title', '')
     city_query = request.GET.get('city', '')
@@ -35,13 +34,10 @@ def homepage(request):
             queries |= Q(categories__icontains=category)
         listings = listings.filter(queries)
 
-
-
     #pagination
-    paginator = Paginator(listings, 9)  #show 6 listings per page
+    paginator = Paginator(listings, 9)  #show 9 listings per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-
 
     for listing in page_obj:
         listing.categories_list = listing.categories.split(',')
@@ -54,27 +50,21 @@ def homepage(request):
     })
 
 
+#view for creating a new listing, restricted to users with a donor role
 @login_required
 def create_listing(request):
     if request.user.role != 'donor':
         messages.error(request, 'Only donors can create listings.')
         return redirect('home')
-
     if request.method == 'POST':
         form = ListingForm(request.POST, request.FILES)
         if form.is_valid():
             listing = form.save(commit=False)
             listing.donor = request.user
-            listing.categories = ','.join(form.cleaned_data['categories'])  #join selected categories
-
-
-            #ensure at least one image is uploaded (image1 is mandatory)
+            listing.categories = ','.join(form.cleaned_data['categories'])
             if 'image1' not in request.FILES:
                 messages.error(request, 'At least one image is required.')
                 return render(request, 'listings/create_listing.html', {'form': form})
-
-
-            #handle saving expiry dates for specific categories
             categories = form.cleaned_data['categories']
             if 'canned' in categories:
                 listing.expiry_date_canned = form.cleaned_data['expiry_date_canned']
@@ -82,45 +72,36 @@ def create_listing(request):
                 listing.expiry_date_dry = form.cleaned_data['expiry_date_dry']
             if 'beverages' in categories:
                 listing.expiry_date_beverages = form.cleaned_data['expiry_date_beverages']
-
-            listing.save()  #save listing with donor and expiry date information
-
+            listing.save()
             messages.success(request, 'Listing created successfully.')
             return redirect('listing_detail', pk=listing.pk)
     else:
         form = ListingForm()
-
     return render(request, 'listings/create_listing.html', {'form': form})
 
-
+#this view displays the details of a specific listing
 def listing_detail(request, pk):
     listing = get_object_or_404(Listing, pk=pk)
     categories_list = listing.categories.split(',')
     is_owner = request.user == listing.donor
-
-    #extract ingredients from listing description
-    ingredients = ','.join(get_ingredients_from_listing(listing))  #adapt based on your logic
-
-    #fetch recipe suggestions based on ingredients
+    ingredients = ','.join(get_ingredients_from_listing(listing))
     recipes = get_recipe_suggestions(ingredients)
-
     context = {
         'listing': listing,
         'categories_list': categories_list,
         'is_owner': is_owner,
-        'recipes': recipes,  #add recipes to context
+        'recipes': recipes,
     }
-
     return render(request, 'listings/listing_detail.html', context)
 
 
-
+#this view displays a list of all listings created by a specific donor
 def donor_listings(request, donor_id):
     donor = get_object_or_404(User, pk=donor_id)
     listings = Listing.objects.filter(donor=donor).order_by('-created_at')
 
     #pagination
-    paginator = Paginator(listings, 9)  #show 6 listings per page
+    paginator = Paginator(listings, 9)  #show 9 listings per page
     page = request.GET.get('page')
 
     try:
@@ -138,7 +119,7 @@ def donor_listings(request, donor_id):
     })
 
 
-
+#this view handles the editing of a listing; ensures that only the donor of the listing can edit it
 @login_required
 def edit_listing(request, pk):
     listing = get_object_or_404(Listing, pk=pk)
@@ -162,7 +143,7 @@ def edit_listing(request, pk):
 
     return render(request, 'listings/edit_listing.html', {'form': form})
 
-
+#this view handles the deletion of a listing; ensures that only the donor of the listing can delete it
 @login_required
 def delete_listing(request, pk):
     listing = get_object_or_404(Listing, pk=pk)
@@ -178,7 +159,8 @@ def delete_listing(request, pk):
     
     return render(request, 'listings/confirm_delete.html', {'listing': listing})
 
-
+#this view handles adding a listing to a user's favorites;
+#ensures the listing is only added if it is not already in the user's favorites
 @login_required
 def add_to_favorites(request, pk):
     listing = get_object_or_404(Listing, pk=pk)
@@ -189,6 +171,9 @@ def add_to_favorites(request, pk):
         messages.success(request, "Added to your favorites!")
     return redirect(request.META.get('HTTP_REFERER', 'homepage'))
 
+
+#view handles removing a listing from a user's favorites;
+#ensures the listing is only removed if it is currently in the user's favorites
 @login_required
 def remove_from_favorites(request, pk):
     listing = get_object_or_404(Listing, pk=pk)
@@ -199,41 +184,13 @@ def remove_from_favorites(request, pk):
         messages.info(request, "This listing is not in your favorites.")
     return redirect(request.META.get('HTTP_REFERER', 'homepage'))
 
+#view displays a paginated list of a user's favorite listings; ensures proper pagination for better user experience
 @login_required
 def user_favorites(request):
     favorites = request.user.favorite_listings.all()
-    paginator = Paginator(favorites, 9)  #show 6 favorite listings per page
+    paginator = Paginator(favorites, 9)  #show 9 favorite listings per page
 
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
     return render(request, 'listings/user_favorites.html', {'page_obj': page_obj})
-
-
-def get_recipe_suggestions(ingredients):
-    api_key = 'edae9cc8988d4cf18a9f7adf2642416a'
-    response = requests.get(
-        f'https://api.spoonacular.com/recipes/findByIngredients?ingredients={ingredients}&number=5&apiKey={api_key}'
-    )
-    if response.status_code == 200:
-        data = response.json()
-        return data
-    else:
-        #handle API errors or lack of data
-        return []
-
-
-
-#recipe_suggestions view that dynamically come from a form
-def recipe_suggestions(request):
-    #get ingredients from the query parameters if provided, otherwise default to an empty string
-    ingredients = request.GET.get('ingredients', '')
-    
-    if ingredients:
-        #call the recipe suggestion function with the user-provided ingredients
-        recipes = get_recipe_suggestions(ingredients)
-    else:
-        #if no ingredients provided, display an empty list or a message
-        recipes = []
-
-    return render(request, 'recipes/recipe_suggestions.html', {'recipes': recipes, 'ingredients': ingredients})
