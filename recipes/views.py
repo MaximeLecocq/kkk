@@ -2,7 +2,7 @@ from django.shortcuts import render
 import requests
 from .utils import get_ingredients_from_listing
 
-#function fetches recipe suggestions from the Spoonacular API based on provided ingredients
+#function fetches recipe suggestions from the Spoonacular API based on provided ingredients.
 def get_recipe_suggestions(ingredients):
     api_key = 'edae9cc8988d4cf18a9f7adf2642416a'
     #makes a GET request to the API to find recipes based on the provided ingredients
